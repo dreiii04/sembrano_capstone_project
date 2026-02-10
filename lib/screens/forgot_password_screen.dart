@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../widgets/custom_textformfield.dart';
 import '../constants.dart';
 import '../widgets/custom_font.dart';
+import 'package:flutter/gestures.dart';
+import '../widgets/custom_inkwell_button.dart';
 
 class PasswordScreen extends StatefulWidget {
   const PasswordScreen({super.key});
@@ -62,86 +64,177 @@ class _PasswordScreenState extends State<PasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 30.w),
-        child: Column(
-          children: [
-            SizedBox(height: 80.h),
-            Center(child: Image.asset('assets/logo/logo.png', width: 180.w)),
-            SizedBox(height: 60.h),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Forgot Password',
-                  style:
-                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'Enter your registered email to receive One-Time Password (OTP)',
-              style: TextStyle(fontSize: 12.sp, color: Colors.black87),
-            ),
-            SizedBox(height: 20.h),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                hintText: 'Email',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.r)),
-                contentPadding: EdgeInsets.symmetric(horizontal: 15.w),
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  //Input code for email verification
-                },
-                child: Text('Verify email',
-                    style: TextStyle(color: Colors.lightBlue, fontSize: 11.sp)),
-              ),
-            ),
-            SizedBox(height: 10.h),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Enter OTP',
-                  style:
-                      TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold)),
-            ),
-            SizedBox(height: 10.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(6, (index) => _otpBox(index)),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  //Input code for otp verification from email
-                },
-                child: Text('Resend code',
-                    style: TextStyle(color: Colors.lightBlue, fontSize: 11.sp)),
-              ),
-            ),
-            SizedBox(height: 30.h),
-            SizedBox(
-              width: double.infinity,
-              height: 50.h,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF263238),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r)),
+      body: Column(
+        children: [
+          // Top Section: Logo
+          Expanded(
+            flex: 2,
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.only(top: 40.h),
+                child: Image.asset(
+                  'assets/logo/logo.png',
+                  height: 80.h,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Icon(Icons.image, size: 50.h),
                 ),
-                onPressed: _verifyOTPEmail,
-                child: Text('Verify',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold)),
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Bottom Section: Password Recovery Form
+          Expanded(
+            flex: 4,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: FB_PRIMARY,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30.r),
+                  topRight: Radius.circular(30.r),
+                ),
+              ),
+            //  child: SingleChildScrollView(
+                child: Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 25.w, vertical: 30.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Title
+                      CustomFont(
+                        text: 'Forgot Password',
+                        fontSize: 22.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      SizedBox(height: 10.h),
+                      Text(
+                        'Enter your registered email to receive One-Time Password (OTP)',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      SizedBox(height: 25.h),
+
+                      // Email Field
+                      CustomTextFormField(
+                        height: ScreenUtil().setHeight(10),
+                        width: ScreenUtil().setWidth(10),
+                        controller: _emailController,
+                        hintText: 'Email',
+                        fontSize: 14.sp,
+                        hintTextSize: 14.sp,
+                        fontColor: FB_DARK_PRIMARY,
+                        bgColor: Colors.white,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Enter email';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Enter valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            //Input code for email verification
+                          },
+                          child: Text(
+                            'Verify email',
+                            style: TextStyle(
+                              color: FB_BACKGROUND_LIGHT,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                        ),
+                      ),
+                    
+
+                      // OTP Section
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: CustomFont(
+                          text: 'Enter OTP',
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                          color: FB_TEXT_COLOR_WHITE,
+                        ),
+                      ),
+                      SizedBox(height: 15.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: List.generate(6, (index) => _otpBox(index)),
+                       
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            //Input code for otp verification from email
+                          },
+                          child: Text(
+                            'Resend code',
+                            style: TextStyle(
+                              color: FB_BACKGROUND_LIGHT,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 25.h),
+
+                      // Verify Button
+                      CustomInkwellButton(
+                        onTap: _verifyOTPEmail,
+                        height: 55.h,
+                        width: double.infinity,
+                        buttonName: 'Verify',
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.bold,
+                        bgColor: FB_DARK_PRIMARY,
+                        fontColor: Colors.white,
+                      ),
+                      SizedBox(height: 10.h),
+
+                      // Back to Login Link
+                      Center(
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Back to ',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'Login',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.sp,
+                                  color: FB_BACKGROUND_LIGHT,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () => Navigator.pop(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                     
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        
+        ],
       ),
     );
   }
@@ -151,18 +244,22 @@ class _PasswordScreenState extends State<PasswordScreen> {
       width: 40.w,
       height: 45.h,
       decoration: BoxDecoration(
+        color: FB_TEXT_COLOR_WHITE,
+        
         border: Border.all(color: Colors.grey.shade400),
         borderRadius: BorderRadius.circular(8.r),
       ),
       child: TextField(
         controller: _otpControllers[index],
+       
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
+        style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: FB_DARK_PRIMARY),
         maxLength: 1,
         onChanged: (value) {
           if (value.isNotEmpty) {
             if (!RegExp(r'^[0-9]$').hasMatch(value)) {
-              _otpControllers[index].clear(); 
+              _otpControllers[index].clear();
               _showValidationError('Number only is acceptable on OTP');
             }
           }
@@ -185,11 +282,9 @@ class ResetPasswordScreen extends StatefulWidget {
 }
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
-  
   final TextEditingController _newPassController = TextEditingController();
   final TextEditingController _conPassController = TextEditingController();
 
-  
   bool _isPasswordVisible = false;
 
   void _showValidationError(String message) {
@@ -209,42 +304,44 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   void _handleResetPassword() {
-  String newPass = _newPassController.text.trim();
-  String conPass = _conPassController.text.trim();
+    String newPass = _newPassController.text.trim();
+    String conPass = _conPassController.text.trim();
 
-  final complexityRegex = RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#\$%^&*(),.?":{}|<>]).*$');
+    final complexityRegex = RegExp(
+        r'^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#\$%^&*(),.?":{}|<>]).*$');
 
-  // 1. Check if empty
-  if (newPass.isEmpty || conPass.isEmpty) {
-    _showValidationError("Please fill in both password fields.");
-    return;
+    // 1. Check if empty
+    if (newPass.isEmpty || conPass.isEmpty) {
+      _showValidationError("Please fill in both password fields.");
+      return;
+    }
+
+    if (newPass.length < 8) {
+      _showValidationError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (!complexityRegex.hasMatch(newPass)) {
+      _showValidationError(
+          "Password must include an uppercase, lowercase, number, and special character.");
+      return;
+    }
+
+    if (newPass != conPass) {
+      _showValidationError("Passwords do not match.");
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Password reset successfully!")),
+    );
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LogInScreen()),
+      (route) => false,
+    );
   }
-
-  if (newPass.length < 8) {
-    _showValidationError("Password must be at least 8 characters long.");
-    return;
-  }
-
-  if (!complexityRegex.hasMatch(newPass)) {
-    _showValidationError("Password must include an uppercase, lowercase, number, and special character.");
-    return;
-  }
-
-  if (newPass != conPass) {
-    _showValidationError("Passwords do not match.");
-    return;
-  }
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text("Password reset successfully!")),
-  );
-
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (context) => const LogInScreen()),
-    (route) => false, 
-  );
-}
 
   @override
   void dispose() {
@@ -252,98 +349,175 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     _conPassController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 30.w),
-        child: Column(
-          children: [
-            SizedBox(height: 80.h),
-            Center(child: Image.asset('assets/logo/logo.png', width: 180.w)),
-            SizedBox(height: 60.h),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Forgot Password',
-                  style:
-                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
-            ),
-
-            SizedBox(height: 15.h),
-
-            TextField(
-              controller: _newPassController,
-              obscureText: !_isPasswordVisible,
-              decoration: InputDecoration(
-                hintText: 'New Password',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10.r)),
-                contentPadding: EdgeInsets.symmetric(horizontal: 15.w),
-                suffixIcon: IconButton(
-                    padding: EdgeInsets.zero,
-                    icon: Icon(
-                      _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                      color: FB_DARK_PRIMARY,
-                      size: 20.sp,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
-                    },
-                  ),
-                ),
-              ),
-
-            SizedBox(height: 20.h),
-
-            TextField(
-              controller: _conPassController,
-              obscureText: !_isPasswordVisible,
-              decoration: InputDecoration(
-              hintText: 'Confirm Password',
-              border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10.r)),
-              contentPadding: EdgeInsets.symmetric(horizontal: 15.w),
-              suffixIcon: IconButton(
-                 padding: EdgeInsets.zero,
-                 icon: Icon(
-                   _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                    color: FB_DARK_PRIMARY,
-                    size: 20.sp,
-                 ),
-                 onPressed: () {
-                   setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
+      body: Column(
+        children: [
+          // Top Section: Logo
+          Expanded(
+            flex: 2,
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.only(top: 40.h),
+                child: Image.asset(
+                  'assets/logo/logo.png',
+                  height: 120.h,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Icon(Icons.image, size: 50.h),
                 ),
               ),
             ),
-           SizedBox(height: 30.h),
-           SizedBox(
+          ),
+
+          // Bottom Section: Reset Password Form
+          Expanded(
+            flex: 3,
+            child: Container(
               width: double.infinity,
-              height: 50.h,
-              child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF263238),
-              shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.r)),
+              decoration: BoxDecoration(
+                color: FB_PRIMARY,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(30.r),
+                  topRight: Radius.circular(30.r),
                 ),
-                
-                onPressed: _handleResetPassword, 
-                child: Text('Reset Password',
-                style: TextStyle(
-                color: Colors.white,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
+              ),
+              child: SingleChildScrollView(
+                child: Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 25.w, vertical: 30.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Title
+                      CustomFont(
+                        text: 'Reset Password',
+                        fontSize: 22.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      SizedBox(height: 25.h),
+
+                      // New Password Field
+                      CustomTextFormField(
+                        height: ScreenUtil().setHeight(10),
+                        width: ScreenUtil().setWidth(10),
+                        controller: _newPassController,
+                        isObscure: !_isPasswordVisible,
+                        hintText: 'New Password',
+                        fontSize: 14.sp,
+                        hintTextSize: 14.sp,
+                        fontColor: FB_DARK_PRIMARY,
+                        bgColor: Colors.white,
+                        suffixIcon: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: FB_DARK_PRIMARY,
+                            size: 20.sp,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                        ),
+                        validator: (value) => value == null || value.isEmpty
+                            ? 'Enter new password'
+                            : null,
+                      ),
+                      SizedBox(height: 20.h),
+
+                      // Confirm Password Field
+                      CustomTextFormField(
+                        height: ScreenUtil().setHeight(10),
+                        width: ScreenUtil().setWidth(10),
+                        controller: _conPassController,
+                        isObscure: !_isPasswordVisible,
+                        hintText: 'Confirm Password',
+                        fontSize: 14.sp,
+                        hintTextSize: 14.sp,
+                        fontColor: FB_DARK_PRIMARY,
+                        bgColor: Colors.white,
+                        suffixIcon: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                            color: FB_DARK_PRIMARY,
+                            size: 20.sp,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                        ),
+                        validator: (value) => value == null || value.isEmpty
+                            ? 'Enter confirm password'
+                            : null,
+                      ),
+                      SizedBox(height: 30.h),
+
+                      // Reset Password Button
+                      CustomInkwellButton(
+                        onTap: _handleResetPassword,
+                        height: 55.h,
+                        width: double.infinity,
+                        buttonName: 'Reset Password',
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.bold,
+                        bgColor: FB_DARK_PRIMARY,
+                        fontColor: Colors.white,
+                      ),
+                      SizedBox(height: 20.h),
+
+                      // Back to Login Link
+                      Center(
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Back to ',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'Login',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.sp,
+                                  color: FB_BACKGROUND_LIGHT,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () => Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const LogInScreen(),
+                                        ),
+                                        (route) => false,
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20.h),
+                    ],
                   ),
                 ),
-              )
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

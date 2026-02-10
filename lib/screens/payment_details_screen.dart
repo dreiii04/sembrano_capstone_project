@@ -5,244 +5,117 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants.dart';
 import '../widgets/custom_font.dart';
+import '../screens/request_detail_screen.dart';
+import '../screens/request_form_screen.dart';
+import '../screens/payment_method_screen.dart';
 
-class PaymentScreen extends StatefulWidget {
-  final String documentName;
-  final double amount;
+class PaymentDetailsScreen extends StatefulWidget {
+  final PendingRequest request;
 
-  const PaymentScreen({
-    super.key,
-    required this.documentName,
-    required this.amount,
-  });
+  const PaymentDetailsScreen({super.key, required this.request});
 
   @override
-  State<PaymentScreen> createState() => _PaymentScreenState();
+  State<PaymentDetailsScreen> createState() => _PaymentDetailsScreenState();
 }
 
-class _PaymentScreenState extends State<PaymentScreen> {
+class _PaymentDetailsScreenState extends State<PaymentDetailsScreen> {
+  bool _isConfirmed = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: FB_PRIMARY,
-        elevation: 4,
+        backgroundColor: const Color(0xFF5D7E97),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: CustomFont(
-          text: "Payment Process",
-          fontSize: 22.sp,
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
+        title: CustomFont(text: "Payment Details", fontSize: 22.sp, color: Colors.white, fontWeight: FontWeight.bold),
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(20.w),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CustomFont(
-              text: "Preview Details",
-              fontSize: 18.sp,
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
-            CustomFont(
-              text: "Check your details before confirming the payment.",
-              fontSize: 14.sp,
-              color: Colors.black54,
-            ),
-
-            SizedBox(height: 25.h),
-            _buildCard(
-              title: "Document Details",
-              child: Column(
-                children: [
-                  _infoRow("Type of Document", widget.documentName),
-                  SizedBox(height: 8.h),
-                  _infoRow("Amount", "₱ ${widget.amount.toStringAsFixed(2)}"),
-                ],
-              ),
-            ),
-
+            _buildSectionCard("Student Information", [
+              _infoRow("Name", "Alyssa Cruz"),
+              _infoRow("Student ID", "2024-123346"),
+              _infoRow("Program", "BSIT-MWA"),
+              _infoRow("Email", "alyssac@school.edu.ph"),
+            ]),
+            SizedBox(height: 15.h),
+            _buildSectionCard("Billing Summary", [
+              _infoRow("Document Requested", widget.request.docName),
+              _infoRow("Processing Fee", "PHP 10.00"),
+              _infoRow("Document Price", "PHP 100.00"),
+              const Divider(),
+              _infoRow("Total Amount Due", "PHP 110.00", isBold: true),
+            ]),
             SizedBox(height: 20.h),
-
-            _buildCard(
-              title: "Payment Method",
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  CustomFont(text: "E-wallet", fontSize: 14.sp, color: Colors.black),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(5.r),
-                    ),
-                    child: CustomFont(
-                      text: "GCash",
-                      fontSize: 14.sp,
-                      color: Colors.blue.shade700,
-                      fontWeight: FontWeight.bold,
-                    ),
+            Row(
+              children: [
+                Checkbox(
+                  value: _isConfirmed,
+                  activeColor: const Color(0xFF5D7E97),
+                  onChanged: (val) => setState(() => _isConfirmed = val!),
+                ),
+                Expanded(
+                  child: CustomFont(
+                    text: "I confirm that the billing details are correct and I agree to proceed to the payment page.",
+                    fontSize: 11.sp, color: Colors.black54,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-
-            const Spacer(),
-
-            Center(
+            SizedBox(height: 30.h),
+            Align(
+              alignment: Alignment.bottomRight,
               child: ElevatedButton(
-                onPressed: () {
-                  final now = DateTime.now();
-
-                  
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SuccessfulScreen(
-                        request: PendingRequest(
-                          docName: widget.documentName,
-                          dateCreated: now,
-                        ),
-                      ),
-                    ),
-                  );
-                },
+                onPressed: _isConfirmed 
+                  ? () => Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentMethodScreen(request: widget.request)))
+                  : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: FB_DARK_PRIMARY,
-                  fixedSize: Size(300.w, 50.h),
+                  backgroundColor: const Color(0xFF233446),
+                  padding: EdgeInsets.symmetric(horizontal: 45.w, vertical: 12.h),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
                 ),
-                child: CustomFont(
-                  text: "Confirm Payment",
-                  fontSize: 18.sp,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                child: CustomFont(text: "Next", color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
             ),
-            SizedBox(height: 20.h),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCard({required String title, required Widget child}) {
+  Widget _buildSectionCard(String title, List<Widget> children) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CustomFont(text: title, fontSize: 15.sp, color: Colors.black, fontWeight: FontWeight.bold),
+          CustomFont(text: title, fontSize: 16.sp, fontWeight: FontWeight.bold, color: const Color(0xFF233446)),
           SizedBox(height: 12.h),
-          child,
+          ...children,
         ],
       ),
     );
   }
 
-  Widget _infoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        CustomFont(text: label, fontSize: 14.sp, color: Colors.black),
-        CustomFont(text: value, fontSize: 14.sp, color: Colors.black, fontWeight: FontWeight.w600),
-      ],
-    );
-  }
-}
-
-// ----SUCCESS SCREEN ----
-
-class SuccessfulScreen extends StatelessWidget {
-  final PendingRequest request;
-
-  const SuccessfulScreen({
-    super.key,
-    required this.request,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 40.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                height: 120.r,
-                width: 120.r,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF9DB2BF),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.check,
-                  color: Colors.white,
-                  size: 80.r,
-                ),
-              ),
-
-              SizedBox(height: 30.h),
-
-              CustomFont(
-                text: "Payment Successful",
-                fontSize: 20.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-
-              SizedBox(height: 50.h),
-
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => HomeScreen(
-                        initialIndex: 1,
-                        newRequest: request,
-                      ),
-                    ),
-                    (route) => false,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF27374D),
-                  fixedSize: Size(340.w, 50.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  elevation: 5,
-                ),
-                child: CustomFont(
-                  text: "Ok",
-                  fontSize: 18.sp,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
+  Widget _infoRow(String label, String value, {bool isBold = false}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          CustomFont(text: label, fontSize: 13.sp, color: Colors.black54),
+          CustomFont(text: value, fontSize: 13.sp, fontWeight: isBold ? FontWeight.bold : FontWeight.w500, color: isBold ? const Color(0xFF233446) : Colors.black87),
+        ],
       ),
     );
   }
 }
-

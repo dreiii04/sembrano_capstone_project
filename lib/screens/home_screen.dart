@@ -1,3 +1,4 @@
+import 'package:capstone_project/screens/data_consent_screen.dart';
 import 'package:capstone_project/screens/pending_screen.dart';
 import 'package:capstone_project/screens/profile_screen.dart';
 import 'package:capstone_project/screens/history_screen.dart'; 
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants.dart';
 import 'request_form_screen.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 
 class HomeScreen extends StatefulWidget {
   final int initialIndex;
@@ -16,7 +18,7 @@ class HomeScreen extends StatefulWidget {
     this.newRequest,
   });
 
-  
+
   static List<PendingRequest> globalRequests = [];
   static List<HistoryItem> globalHistory = [];
 
@@ -41,15 +43,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!exists) {
         HomeScreen.globalRequests.add(widget.newRequest!);
-        
-        HomeScreen.globalHistory.insert(0, HistoryItem(
+
+        //Adds also the current request
+        HomeScreen.globalHistory.add(HistoryItem(
           title: widget.newRequest!.docName,
           date: widget.newRequest!.dateCreated,
-          isApproved: true, 
+          purpose: "Document Request",
+          status: "Pending",
+          isApproved: false,
         ));
+
+        
       }
     }
   }
+
 
   void _onTappedBar(int value) {
     setState(() {
@@ -61,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
       curve: Curves.easeInOut,
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ... (Keep your _buildNavigationItem and _buildHomeContent as they were)
   
   Widget _buildNavigationItem(IconData icon, IconData activeIcon, int index) {
     bool isSelected = _selectedIndex == index;
@@ -121,124 +129,185 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
-  Widget _buildHomeContent(BuildContext context) {
-    return Stack(
+  // Note: You may need to add carousel_slider: ^5.0.0 to your pubspec.yaml
+// Or use a PageView if you prefer not to add dependencies.
+
+Widget _buildHomeContent(BuildContext context) {
+  return SingleChildScrollView(
+    child: Column(
       children: [
-        Container(
-          height: 300.h,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: FB_PRIMARY,
-            borderRadius: BorderRadius.vertical(
-              bottom: Radius.elliptical(200.w, 50.h),
-            ),
-            image: const DecorationImage(
-              image: AssetImage('assets/image/BluePattern.jpg'),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: EdgeInsets.all(20.w),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                    );
-                  },
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white.withOpacity(0.9),
-                    radius: 18.r,
-                    child: Icon(Icons.person, size: 20.sp, color: FB_PRIMARY),
-                  ),
+        Stack(
+          clipBehavior: Clip.none, // Allows the card to overlap the header
+          children: [
+            // Top Section: Header with Welcome Text
+            Container(
+              height: 260.h,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: FB_PRIMARY,
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(30.r),
                 ),
               ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 180.h,
-          left: 25.w,
-          right: 25.w,
-          child: Container(
-            height: 150.h,
-            padding: EdgeInsets.all(15.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10.r,
-                  offset: Offset(0, 5.h),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+              child: SafeArea(
+                child: Column(
                   children: [
-                    CircleAvatar(
-                      backgroundColor: FB_DARK_PRIMARY.withOpacity(0.1),
-                      radius: 15.r,
-                      child: Icon(Icons.person, size: 20.sp, color: FB_DARK_PRIMARY),
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())),
+                          child: CircleAvatar(
+                            backgroundColor: Colors.white,
+                            radius: 20.r,
+                            child: Icon(Icons.person, size: 22.sp, color: FB_PRIMARY),
+                          ),
+                        ),
+                      ),
                     ),
-                    SizedBox(width: 10.w),
                     Text(
-                      "Admin",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
+                      "Welcome to VerifiTOR",
+                      style: TextStyle(color: Colors.white, fontSize: 32.sp, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "“Innovation in Every Credentials”",
+                      style: TextStyle(color: Colors.white70, fontSize: 16.sp, fontStyle: FontStyle.italic),
                     ),
                   ],
                 ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Icon(Icons.notifications_none, size: 24.sp, color: Colors.black54),
+              ),
+            ),
+
+            // Admin Notification Card (Smaller and centered)
+            Positioned(
+              top: 180.h,
+              left: 40.w,
+              right: 40.w,
+              child: Container(
+                padding: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15.r),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4.h))
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.black,
+                          radius: 14.r,
+                          child: Icon(Icons.person, size: 16.sp, color: Colors.white),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text("Admin", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      "Your requested document is ready!\nPlease collect it at the Registrar's Office.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12.sp, color: Colors.black87),
+                    ),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Icon(Icons.notifications_active, size: 18.sp, color: Colors.black),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        // Spacing for the overlapping card
+        SizedBox(height: 20.h),
+
+        // REQUEST BUTTON
+        Padding(
+          padding: EdgeInsets.only(bottom: 30.h),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1B2E3C), // Dark Navy from image
+              padding: EdgeInsets.symmetric(horizontal: 60.w, vertical: 15.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
+              elevation: 5,
+            ),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const DataConsentScreen()));
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("REQUEST",
+                    style: TextStyle(color: Colors.white, fontSize: 22.sp, fontWeight: FontWeight.bold)),
+                SizedBox(width: 20.w),
+                Icon(Icons.arrow_forward, color: Colors.white, size: 24.sp),
+              ],
+            ),
+          ),
+        ),
+       // SizedBox(height: 10.h),
+
+
+        // Document Price List Section (Carousel)
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 20.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10.r),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+            ),
+            child: Column(
+              children: [
+                Text(
+                  "Document Requests Price List",
+                  style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 10.h),
+                
+                // Image Carousel Placeholder
+                SizedBox(
+                  height: 300.h, // Height for your table image
+                  child: PageView(
+                    controller: PageController(viewportFraction: 0.9),
+                    children: [
+                      _buildCarouselImage('assets/image/docs_prices.png'),
+                      _buildCarouselImage('assets/image/codelectives.jpg'),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
         ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: EdgeInsets.only(bottom: 60.h),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: FB_DARK_PRIMARY,
-                padding: EdgeInsets.symmetric(horizontal: 45.w, vertical: 15.h),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15.r)),
-                elevation: 8,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const RequestFormScreen()),
-                );
-              },
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text("REQUEST",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold)),
-                  SizedBox(width: 30.w),
-                  Icon(Icons.arrow_forward, color: Colors.white, size: 20.sp),
-                ],
-              ),
-            ),
-          ),
-        ),
+        SizedBox(height: 20.h),
+
+        
       ],
-    );
-  }
+    ),
+  );
 }
 
 
+  // Helper widget for Carousel Images
+  Widget _buildCarouselImage(String path) {
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: 10.w),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(10.r),
+      image: DecorationImage(
+        image: AssetImage(path),
+        fit: BoxFit.contain,
+      ),
+    ),
+  );
+}

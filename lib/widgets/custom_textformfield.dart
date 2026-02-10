@@ -14,6 +14,7 @@ class CustomTextFormField extends StatelessWidget {
   final String? Function(String?)? validator;
   final void Function(String?)? onSaved;
   final TextInputType keyboardType;
+  final Color bgColor;
 
   const CustomTextFormField({
     super.key,
@@ -29,6 +30,7 @@ class CustomTextFormField extends StatelessWidget {
     this.validator,
     this.onSaved,
     this.keyboardType = TextInputType.text,
+    this.bgColor = Colors.white,
   });
 
   @override
@@ -37,15 +39,24 @@ class CustomTextFormField extends StatelessWidget {
       height: 60.h,
       width: double.infinity,
       child: TextFormField(
+
         controller: controller,
         obscureText: isObscure,
         validator: validator,
         onSaved: onSaved, // ✅ added
         keyboardType: keyboardType,
+        cursorColor: fontColor,
+     
+    
         style: TextStyle(fontSize: fontSize, color: fontColor),
         decoration: InputDecoration(
+          filled: true,
+          fillColor: bgColor,
           hintText: hintText,
-          hintStyle: TextStyle(fontSize: hintTextSize, color: Colors.grey),
+          hintStyle: TextStyle(
+            fontSize: hintTextSize,
+            color: fontColor.withOpacity(0.75),
+          ),
           suffixIcon: suffixIcon,
           contentPadding:
               EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),

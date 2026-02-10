@@ -24,7 +24,8 @@ class CustomInkwellButton extends StatelessWidget {
       this.fontColor = Colors.white,
       this.fontSize = 1,
       this.icon = const Icon(null),
-      this.fontWeight = FontWeight.normal});
+      this.fontWeight = FontWeight.normal, 
+     });
 
   @override
   Widget build(BuildContext context) {
@@ -50,4 +51,7 @@ class CustomInkwellButton extends StatelessWidget {
       ),
     );
   }
+
+
+
 }

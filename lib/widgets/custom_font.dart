@@ -1,3 +1,4 @@
+import 'package:capstone_project/constants.dart';
 import 'package:flutter/material.dart';
 
 class CustomFont extends StatelessWidget {
@@ -10,7 +11,8 @@ class CustomFont extends StatelessWidget {
     this.fontWeight = FontWeight.normal,
     this.textAlign = TextAlign.left,
     this.letterSpacing = 0,
-    this.fontStyle = FontStyle.normal,
+    this.fontStyle = FontStyle.normal, 
+     // Default background color 
   });
 
   final String text;
@@ -19,7 +21,7 @@ class CustomFont extends StatelessWidget {
   final FontWeight fontWeight;
   final TextAlign textAlign;
   final String fontFamily;
-  final FontStyle fontStyle;
+  final FontStyle fontStyle; 
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +29,7 @@ class CustomFont extends StatelessWidget {
       text,
       textAlign: textAlign,
       style: TextStyle(
+       
         fontFamily: fontFamily,
         fontSize: fontSize,
         color: color,

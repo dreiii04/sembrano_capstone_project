@@ -2,41 +2,51 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../widgets/custom_font.dart';
+import '../screens/request_detail_screen.dart';
+
 
 class PendingRequest {
   final String docName;
+ final String purpose;
   final DateTime dateCreated;
+  final String status; // e.g., "PENDING", "APPROVED", "RELEASED"
 
   PendingRequest({
     required this.docName,
+    required this.purpose,
     required this.dateCreated,
+    required this.status,
   });
 }
+
 
 class PendingScreen extends StatefulWidget {
   final List<PendingRequest> requestList;
 
-  const PendingScreen({
-    super.key,
-    required this.requestList,
-  });
+  const PendingScreen({super.key, required this.requestList});
 
   @override
   State<PendingScreen> createState() => _PendingScreenState();
 }
 
 class _PendingScreenState extends State<PendingScreen> {
+  String _selectedFilter = "All";
   @override
   Widget build(BuildContext context) {
+    // 1. Logic to get unique doc names from the list for the filter
+    List<String> filters = ["All"];
+    filters.addAll(widget.requestList.map((e) => e.docName).toSet().toList());
+
+    // 2. Filter the list based on selection
+    List<PendingRequest> filteredList = _selectedFilter == "All"
+        ? widget.requestList
+        : widget.requestList.where((r) => r.docName == _selectedFilter).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: Column(
         children: [
-          Container(
-            height: 70.h,
-            width: double.infinity,
-            color: const Color(0xFF5D7E97),
-          ),
+          Container(height: 70.h, width: double.infinity, color: const Color(0xFF5D7E97)),
           Expanded(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -44,22 +54,43 @@ class _PendingScreenState extends State<PendingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 20.h),
-                  CustomFont(
-                    text: "Pending",
-                    fontSize: 40.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                  Text("Pending", style: TextStyle(fontSize: 32.sp, fontWeight: FontWeight.bold)),
+                  
+                  // Filter Dropdown
+                  Container(
+                    margin: EdgeInsets.symmetric(vertical: 10.h),
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8.r),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButton<String>(
+                      value: _selectedFilter,
+                      isExpanded: true,
+                      underline: const SizedBox(),
+                      items: filters.map((String value) {
+                        return DropdownMenuItem<String>(value: value, child: Text(value));
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setState(() => _selectedFilter = newValue!);
+                      },
+                    ),
                   ),
-                  SizedBox(height: 10.h),
 
                   Expanded(
-                    child: widget.requestList.isNotEmpty
+                    child: filteredList.isNotEmpty
                         ? ListView.builder(
-                            padding: EdgeInsets.only(top: 10.h, bottom: 20.h),
-                            itemCount: widget.requestList.length,
+                            itemCount: filteredList.length,
                             itemBuilder: (context, index) {
-                              final item = widget.requestList[index];
-                              return _buildCard(item.docName, item.dateCreated);
+                              final item = filteredList[index];
+                              return InkWell(
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => RequestDetailsScreen(request: item)),
+                                ),
+                                child: _buildCard(item),
+                              );
                             },
                           )
                         : _buildEmptyState(),
@@ -71,6 +102,56 @@ class _PendingScreenState extends State<PendingScreen> {
         ],
       ),
     );
+  }
+
+
+
+
+ Widget _buildCard(PendingRequest item) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 15.h),
+      padding: EdgeInsets.all(15.r),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.docName, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+
+              SizedBox(height: 10.h),
+
+              Text(DateFormat('MMM d, y  h:mm a').format(item.dateCreated), 
+                  style: TextStyle(fontSize: 12.sp, color: Colors.grey)),
+            ],
+          ),
+
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: _getStatusColor(item.status).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Text(item.status, 
+                style: TextStyle(color: _getStatusColor(item.status), fontSize: 10.sp, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case "RELEASED": return Colors.orange;
+      case "PROCESSING": return Colors.green;
+      case "APPROVED": return Colors.blue;
+      default: return Colors.yellow.shade700;
+    }
   }
 
   Widget _buildEmptyState() {
@@ -89,63 +170,5 @@ class _PendingScreenState extends State<PendingScreen> {
       ),
     );
   }
-
-  Widget _buildCard(String name, DateTime dt) {
-    String dateStr = DateFormat('MMMM d, y').format(dt);
-    String timeStr = DateFormat('h:mm a').format(dt);
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 15.h),
-      padding: EdgeInsets.all(20.r),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15.r),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CustomFont(
-            text: name,
-            fontSize: 18.sp,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-          SizedBox(height: 6.h),
-          CustomFont(text: dateStr, fontSize: 13.sp, color: Colors.black54),
-          CustomFont(text: timeStr, fontSize: 13.sp, color: Colors.black54),
-          SizedBox(height: 15.h),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F3F5),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.circle, size: 10.r, color: Colors.amber),
-                SizedBox(width: 8.w),
-                CustomFont(
-                  text: "Pending",
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-  }
 }
-
-
+ 
