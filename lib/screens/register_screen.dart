@@ -5,6 +5,7 @@ import '../widgets/custom_textformfield.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/gestures.dart';
+import '../services/api_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -29,6 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _isPasswordObscure = true;
   bool _isConfirmPasswordObscure = true;
+  bool _isLoading = false;
 
   void _showValidationAlert(String message) {
     showDialog(
@@ -53,16 +55,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  void _handleRegister() {
+  void _handleRegister() async {
+    final firstName = firstNameController.text.trim();
+    final lastName = lastNameController.text.trim();
     final email = emailController.text.trim();
+    final studentId = studentIdController.text.trim();
+    final yearLevel = yearLevelController.text.trim();
+    final program = programController.text.trim();
     final pass = passwordController.text.trim();
     final confirm = confirmPasswordController.text.trim();
 
     final complexityRegex = RegExp(
         r'^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#\$%^&*(),.?":{}|<>]).*$');
 
-    if (email.isEmpty || pass.isEmpty || confirm.isEmpty) {
-      _showValidationAlert("All fields are required.");
+    if (firstName.isEmpty || lastName.isEmpty || email.isEmpty || pass.isEmpty || confirm.isEmpty) {
+      _showValidationAlert("All required fields must be filled.");
       return;
     }
 
@@ -82,11 +89,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Account created successfully!")),
-    );
+    // Show loading
+    setState(() {
+      _isLoading = true;
+    });
 
-    Navigator.pop(context);
+    try {
+      // Call API to register
+      final response = await ApiService.register(
+        email: email,
+        password: pass,
+        firstName: firstName,
+        lastName: lastName,
+        role: 'student',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Account created successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showValidationAlert("Registration failed: ${e.toString().replaceAll('Exception: ', '')}");
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -321,13 +358,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                         // Register Button
                         CustomInkwellButton(
-                          onTap: _handleRegister,
+                          onTap: _isLoading ? null : _handleRegister,
                           height: 55.h,
                           width: double.infinity,
-                          buttonName: 'Register',
+                          buttonName: _isLoading ? 'Registering...' : 'Register',
                           fontSize: 24.sp,
                           fontWeight: FontWeight.bold,
-                          bgColor: FB_DARK_PRIMARY,
+                          bgColor: _isLoading ? FB_PRIMARY : FB_DARK_PRIMARY,
                           fontColor: Colors.white,
                         ),
                         SizedBox(height: 20.h),

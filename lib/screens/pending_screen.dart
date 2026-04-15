@@ -3,22 +3,23 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../widgets/custom_font.dart';
 import '../screens/request_detail_screen.dart';
-
+import '../services/api_service.dart';
 
 class PendingRequest {
   final String docName;
- final String purpose;
+  final String purpose;
   final DateTime dateCreated;
   final String status; // e.g., "PENDING", "APPROVED", "RELEASED"
+  final String? id; // Add ID for API reference
 
   PendingRequest({
     required this.docName,
     required this.purpose,
     required this.dateCreated,
     required this.status,
+    this.id,
   });
 }
-
 
 class PendingScreen extends StatefulWidget {
   final List<PendingRequest> requestList;
@@ -31,16 +32,52 @@ class PendingScreen extends StatefulWidget {
 
 class _PendingScreenState extends State<PendingScreen> {
   String _selectedFilter = "All";
+  List<PendingRequest> _apiRequests = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRequests();
+  }
+
+  Future<void> _fetchRequests() async {
+    try {
+      final requests = await ApiService.getRequests();
+      setState(() {
+        _apiRequests = requests.map((req) {
+          return PendingRequest(
+            docName: req['documentType'] ?? req['subDocumentType'] ?? 'Unknown',
+            purpose: req['purpose'] ?? req['otherPurpose'] ?? 'Unknown',
+            dateCreated: DateTime.tryParse(req['createdAt'] ?? '') ?? DateTime.now(),
+            status: req['status'] ?? 'Pending',
+            id: req['_id'],
+          );
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      // If API fails, use the passed requestList as fallback
+      _apiRequests = widget.requestList;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Combine API requests with local requests
+    List<PendingRequest> allRequests = [..._apiRequests, ...widget.requestList];
+
     // 1. Logic to get unique doc names from the list for the filter
     List<String> filters = ["All"];
-    filters.addAll(widget.requestList.map((e) => e.docName).toSet().toList());
+    filters.addAll(allRequests.map((e) => e.docName).toSet().toList());
 
     // 2. Filter the list based on selection
     List<PendingRequest> filteredList = _selectedFilter == "All"
-        ? widget.requestList
-        : widget.requestList.where((r) => r.docName == _selectedFilter).toList();
+        ? allRequests
+        : allRequests.where((r) => r.docName == _selectedFilter).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -54,46 +91,59 @@ class _PendingScreenState extends State<PendingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 20.h),
-                  Text("Pending", style: TextStyle(fontSize: 32.sp, fontWeight: FontWeight.bold)),
-                  
-                  // Filter Dropdown
-                  Container(
-                    margin: EdgeInsets.symmetric(vertical: 10.h),
-                    padding: EdgeInsets.symmetric(horizontal: 12.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _selectedFilter,
-                      isExpanded: true,
-                      underline: const SizedBox(),
-                      items: filters.map((String value) {
-                        return DropdownMenuItem<String>(value: value, child: Text(value));
-                      }).toList(),
-                      onChanged: (newValue) {
-                        setState(() => _selectedFilter = newValue!);
-                      },
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Pending", style: TextStyle(fontSize: 32.sp, fontWeight: FontWeight.bold)),
+                      if (!_isLoading)
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: _fetchRequests,
+                        ),
+                    ],
                   ),
 
+                  // Filter Dropdown
+                  if (!_isLoading && allRequests.isNotEmpty)
+                    Container(
+                      margin: EdgeInsets.symmetric(vertical: 10.h),
+                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: DropdownButton<String>(
+                        value: _selectedFilter,
+                        isExpanded: true,
+                        underline: const SizedBox(),
+                        items: filters.map((String value) {
+                          return DropdownMenuItem<String>(value: value, child: Text(value));
+                        }).toList(),
+                        onChanged: (newValue) {
+                          setState(() => _selectedFilter = newValue!);
+                        },
+                      ),
+                    ),
+
                   Expanded(
-                    child: filteredList.isNotEmpty
-                        ? ListView.builder(
-                            itemCount: filteredList.length,
-                            itemBuilder: (context, index) {
-                              final item = filteredList[index];
-                              return InkWell(
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => RequestDetailsScreen(request: item)),
-                                ),
-                                child: _buildCard(item),
-                              );
-                            },
-                          )
-                        : _buildEmptyState(),
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : filteredList.isNotEmpty
+                            ? ListView.builder(
+                                itemCount: filteredList.length,
+                                itemBuilder: (context, index) {
+                                  final item = filteredList[index];
+                                  return InkWell(
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => RequestDetailsScreen(request: item)),
+                                    ),
+                                    child: _buildCard(item),
+                                  );
+                                },
+                              )
+                            : _buildEmptyState(),
                   ),
                 ],
               ),

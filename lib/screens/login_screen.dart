@@ -7,6 +7,7 @@ import '../constants.dart';
 import '../widgets/custom_inkwell_button.dart';
 import '../widgets/custom_font.dart';
 import 'package:flutter/gestures.dart';
+import '../services/api_service.dart';
 
 class LogInScreen extends StatefulWidget {
   const LogInScreen({super.key});
@@ -21,10 +22,14 @@ class _LogInScreenState extends State<LogInScreen> {
   final _formKey = GlobalKey<FormState>();
 
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
-  // ✅ Hardcoded credentials (for now)
-  final String correctUsername = "User@gmail.com";
-  final String correctPassword = "User1234";
+  @override
+  void initState() {
+    super.initState();
+    // Initialize API service
+    ApiService.init();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -158,36 +163,60 @@ class _LogInScreenState extends State<LogInScreen> {
 
                         // LOGIN BUTTON
                         CustomInkwellButton(
-                          onTap: () {
+                          onTap: () async {
                             if (!_formKey.currentState!.validate()) return;
 
                             final email = emailController.text.trim();
                             final password = passwordController.text.trim();
 
-                            if (email == correctUsername &&
-                                password == correctPassword) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const HomeScreen(),
-                                ),
+                            setState(() {
+                              _isLoading = true;
+                            });
+
+                            try {
+                              final response = await ApiService.login(
+                                email: email,
+                                password: password,
                               );
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Invalid email or password'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Login successful!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const HomeScreen(),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(e.toString().replaceAll('Exception: ', '')),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() {
+                                  _isLoading = false;
+                                });
+                              }
                             }
                           },
                           height: 55.h,
                           width: ScreenUtil().screenWidth,
-                          buttonName: 'Login',
+                          buttonName: _isLoading ? 'Logging in...' : 'Login',
                           fontColor: FB_TEXT_COLOR_WHITE,
                           fontSize: 24.sp,
                           fontWeight: FontWeight.bold,
-                          bgColor: FB_DARK_PRIMARY,
+                          bgColor: _isLoading ? FB_PRIMARY : FB_DARK_PRIMARY,
                         ),
 
                         SizedBox(height: 25.h),

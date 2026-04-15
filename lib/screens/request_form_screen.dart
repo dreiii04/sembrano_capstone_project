@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants.dart';
 import '../widgets/custom_font.dart';
+import '../services/api_service.dart';
 
 
 class RequestFormScreen extends StatefulWidget {
@@ -73,7 +74,7 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
     );
   }
 
-  void _handleSubmission() {
+  void _handleSubmission() async {
     // Check main requirements
     if (_mainDocType == null || _selectedPurpose == null) {
       _showErrorDialog("Please select the document type and purpose.");
@@ -92,31 +93,60 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
       return;
     }
 
-    // Prepare data for the Pending Screen
-    String finalDocName = (_mainDocType == 'Transcript of Records') 
-        ? 'Transcript of Records' 
+    // Prepare data
+    String finalDocName = (_mainDocType == 'Transcript of Records')
+        ? 'Transcript of Records'
         : (_subDocType ?? _mainDocType!);
 
-    String finalPurpose = (_selectedPurpose == 'Others') 
-        ? _otherPurposeController.text.trim() 
+    String finalPurpose = (_selectedPurpose == 'Others')
+        ? _otherPurposeController.text.trim()
         : _selectedPurpose!;
 
-    // Redirect to Pending Screen (Index 1 of your Home/Main layout)
-    // Adjust 'HomeScreen' to match your actual Main/Home class name
-    Navigator.push(
-      context,
-MaterialPageRoute(
-                      builder: (context) => SuccessfulScreen(
-                        request: PendingRequest(
-                          status: "Pending",
-                          purpose: finalPurpose,
-                          docName: finalDocName,
-                          dateCreated: DateTime.now(),
-                        ),
-                      ),
-                    ),
-                  );
-                    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      // Send request to API
+      final response = await ApiService.createRequest(
+        documentType: _mainDocType!,
+        subDocumentType: _subDocType ?? '',
+        purpose: finalPurpose,
+        otherPurpose: _selectedPurpose == 'Others' ? finalPurpose : '',
+        quantity: 1,
+      );
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Prepare data for the Pending Screen
+      final request = PendingRequest(
+        status: "Pending",
+        purpose: finalPurpose,
+        docName: finalDocName,
+        dateCreated: DateTime.now(),
+      );
+
+      // Redirect to Pending Screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SuccessfulScreen(
+            request: request,
+          ),
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      _showErrorDialog("Failed to submit request: ${e.toString().replaceAll('Exception: ', '')}");
+    }
   }
 
   @override

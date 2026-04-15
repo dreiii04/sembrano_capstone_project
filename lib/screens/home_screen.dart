@@ -1,12 +1,13 @@
 import 'package:capstone_project/screens/data_consent_screen.dart';
 import 'package:capstone_project/screens/pending_screen.dart';
 import 'package:capstone_project/screens/profile_screen.dart';
-import 'package:capstone_project/screens/history_screen.dart'; 
+import 'package:capstone_project/screens/history_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants.dart';
 import 'request_form_screen.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import '../services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final int initialIndex;
@@ -36,9 +37,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _selectedIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _selectedIndex);
 
+    // Initialize API service
+    ApiService.init();
+
     if (widget.newRequest != null) {
-      
-      bool exists = HomeScreen.globalRequests.any((req) => 
+
+      bool exists = HomeScreen.globalRequests.any((req) =>
         req.dateCreated == widget.newRequest!.dateCreated);
 
       if (!exists) {
@@ -53,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
           isApproved: false,
         ));
 
-        
+
       }
     }
   }

@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../constants.dart';
 import '../widgets/custom_font.dart';
 import '../screens/history_detail_screen.dart';
-
+import '../services/api_service.dart';
 
 class HistoryItem {
   final String title;
@@ -12,13 +12,15 @@ class HistoryItem {
   final String purpose; // New
   final String status;  // e.g., "Released", "Rejected"
   final bool isApproved;
+  final String? id; // Add ID for API reference
 
   HistoryItem({
-    required this.title, 
-    required this.date, 
+    required this.title,
+    required this.date,
     required this.purpose,
     required this.status,
     required this.isApproved,
+    this.id,
   });
 }
 
@@ -32,16 +34,54 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   String _selectedFilter = "All";
+  List<HistoryItem> _apiHistory = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHistory();
+  }
+
+  Future<void> _fetchHistory() async {
+    try {
+      final requests = await ApiService.getRequests();
+      setState(() {
+        _apiHistory = requests
+            .where((req) => req['status'] != 'Pending')
+            .map((req) {
+          return HistoryItem(
+            title: req['documentType'] ?? req['subDocumentType'] ?? 'Unknown',
+            date: DateTime.tryParse(req['createdAt'] ?? '') ?? DateTime.now(),
+            purpose: req['purpose'] ?? req['otherPurpose'] ?? 'Unknown',
+            status: req['status'] ?? 'Unknown',
+            isApproved: req['status'] == 'Completed' || req['status'] == 'Released',
+            id: req['_id'],
+          );
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      // If API fails, use the passed historyList as fallback
+      _apiHistory = widget.historyList;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Combine API history with local history
+    List<HistoryItem> allHistory = [..._apiHistory, ...widget.historyList];
+
     // Filter Logic
     List<String> filters = ["All"];
-    filters.addAll(widget.historyList.map((e) => e.title).toSet().toList());
+    filters.addAll(allHistory.map((e) => e.title).toSet().toList());
 
     List<HistoryItem> filteredList = _selectedFilter == "All"
-        ? widget.historyList
-        : widget.historyList.where((h) => h.title == _selectedFilter).toList();
+        ? allHistory
+        : allHistory.where((h) => h.title == _selectedFilter).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -55,42 +95,55 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 20.h),
-                  CustomFont(text: "History", fontSize: 40.sp, fontWeight: FontWeight.bold, color: Colors.black),
-                  
-                  // Filter Dropdown
-                  Container(
-                    margin: EdgeInsets.symmetric(vertical: 10.h),
-                    padding: EdgeInsets.symmetric(horizontal: 12.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _selectedFilter,
-                      isExpanded: true,
-                      underline: const SizedBox(),
-                      items: filters.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
-                      onChanged: (val) => setState(() => _selectedFilter = val!),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      CustomFont(text: "History", fontSize: 40.sp, fontWeight: FontWeight.bold, color: Colors.black),
+                      if (!_isLoading)
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: _fetchHistory,
+                        ),
+                    ],
                   ),
 
+                  // Filter Dropdown
+                  if (!_isLoading && allHistory.isNotEmpty)
+                    Container(
+                      margin: EdgeInsets.symmetric(vertical: 10.h),
+                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8.r),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: DropdownButton<String>(
+                        value: _selectedFilter,
+                        isExpanded: true,
+                        underline: const SizedBox(),
+                        items: filters.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                        onChanged: (val) => setState(() => _selectedFilter = val!),
+                      ),
+                    ),
+
                   Expanded(
-                    child: filteredList.isNotEmpty
-                        ? ListView.builder(
-                            itemCount: filteredList.length,
-                            itemBuilder: (context, index) {
-                              final item = filteredList[index];
-                              return InkWell(
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => HistoryDetailScreen(item: item)),
-                                ),
-                                child: _buildHistoryCard(item),
-                              );
-                            },
-                          )
-                        : const Center(child: Text("No history found")),
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : filteredList.isNotEmpty
+                            ? ListView.builder(
+                                itemCount: filteredList.length,
+                                itemBuilder: (context, index) {
+                                  final item = filteredList[index];
+                                  return InkWell(
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => HistoryDetailScreen(item: item)),
+                                    ),
+                                    child: _buildHistoryCard(item),
+                                  );
+                                },
+                              )
+                            : const Center(child: Text("No history found")),
                   ),
                 ],
               ),
