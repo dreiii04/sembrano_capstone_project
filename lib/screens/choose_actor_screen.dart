@@ -1,7 +1,4 @@
-import 'package:capstone_project/screens/forgot_password_screen.dart';
 import 'package:capstone_project/screens/login_screen.dart';
-import '../screens/home_screen.dart';
-import '../widgets/custom_textformfield.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants.dart';
@@ -79,7 +76,9 @@ class ChooseActorScreen extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => const LogInScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const LogInScreen(role: 'student'),
+                        ),
                       );
                     },
                     height: 65.h,
@@ -98,7 +97,9 @@ class ChooseActorScreen extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => const LogInScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const LogInScreen(role: 'alumni'),
+                        ),
                       );
                     },
                     height: 65.h,

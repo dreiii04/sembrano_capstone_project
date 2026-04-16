@@ -2,6 +2,7 @@ import 'package:capstone_project/screens/choose_actor_screen.dart';
 import 'package:capstone_project/screens/data_consent_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:capstone_project/services/notification_service.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -10,9 +11,11 @@ import 'screens/request_form_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/pending_screen.dart';
 import 'screens/forgot_password_screen.dart';
-import 'screens/request_detail_screen.dart';
+import 'screens/notification_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
   runApp(const Verifitor());
 }
 
@@ -42,6 +45,7 @@ class Verifitor extends StatelessWidget {
             '/profile': (context) => const ProfileScreen(),
             '/pending': (context) => const PendingScreen(requestList: [],),
             '/forgot': (context) => const PasswordScreen(),
+            '/notifications': (context) => const NotificationScreen(),
           },
         );
       },

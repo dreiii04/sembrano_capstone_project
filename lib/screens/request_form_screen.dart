@@ -23,12 +23,21 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
   bool _isConfirmed = false;
 
   final TextEditingController _otherPurposeController = TextEditingController();
+  final TextEditingController _otherRequestController = TextEditingController();
 
   // --- Data Lists ---
   final List<String> mainCategories = [
+    'Original Documents',
     'Certifications', 
     'Certified True Copy', 
     'Transcript of Records'
+  ];
+
+  final List<String> originalDocumentList = [
+    'F137 / SF10',
+    'Transcript of Record',
+    'Diploma',
+    'Others',
   ];
 
   final List<String> certificationList = [
@@ -38,18 +47,29 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
     'Certificate of Candidacy for Graduation',
     'Certificate of Units Earned',
     'Certificate of Assessment',
-    'Certificate of Registration'
+    'Certificate of Registration',
+    'Others',
   ];
 
   final List<String> trueCopyList = [
     'CTC of Certificate of Matriculation',
     'CTC of Diploma',
     'CTC of Curriculum',
+    'Card',
+    'CAV (Red Ribbon)',
+    'Cert. of Grades / GWA / Transfer Credential',
+    'Others',
   ];
 
   final List<String> purposes = [
+    'Application to Other School',
+    'Application for College',
     'Employment', 
     'Board Exam', 
+    'Board Examinations',
+    'Abroad',
+    'Visa',
+    'Correction of Name/Birthdate',
     'Personal Use', 
     'Transfer', 
     'Others'
@@ -82,8 +102,21 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
     }
 
     // Check sub-selection if needed
-    if ((_mainDocType == 'Certifications' || _mainDocType == 'Certified True Copy') && _subDocType == null) {
+    if ((_mainDocType == 'Original Documents' ||
+            _mainDocType == 'Certifications' ||
+            _mainDocType == 'Certified True Copy') &&
+        _subDocType == null) {
       _showErrorDialog("Please specify which document you need from the list.");
+      return;
+    }
+
+    if (_subDocType == 'Others' && _otherRequestController.text.trim().isEmpty) {
+      _showErrorDialog("Please specify the other document you are requesting.");
+      return;
+    }
+
+    if (_selectedPurpose == 'Others' && _otherPurposeController.text.trim().isEmpty) {
+      _showErrorDialog("Please specify the purpose.");
       return;
     }
 
@@ -95,8 +128,10 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
 
     // Prepare data
     String finalDocName = (_mainDocType == 'Transcript of Records')
-        ? 'Transcript of Records'
-        : (_subDocType ?? _mainDocType!);
+      ? 'Transcript of Records'
+      : (_subDocType == 'Others'
+        ? _otherRequestController.text.trim()
+        : (_subDocType ?? _mainDocType!));
 
     String finalPurpose = (_selectedPurpose == 'Others')
         ? _otherPurposeController.text.trim()
@@ -115,21 +150,37 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
       // Send request to API
       final response = await ApiService.createRequest(
         documentType: _mainDocType!,
-        subDocumentType: _subDocType ?? '',
+        subDocumentType: finalDocName,
         purpose: finalPurpose,
         otherPurpose: _selectedPurpose == 'Others' ? finalPurpose : '',
         quantity: 1,
       );
 
+      if (response['_id'] != null) {
+        try {
+          await ApiService.updateRequestStatus(
+            id: response['_id'].toString(),
+            status: 'Pending Payment',
+          );
+          response['status'] = 'Pending Payment';
+        } catch (_) {
+          response['status'] = response['status'] ?? 'Pending Payment';
+        }
+      } else {
+        response['status'] = response['status'] ?? 'Pending Payment';
+      }
+
       // Close loading dialog
       if (mounted) Navigator.pop(context);
 
       // Prepare data for the Pending Screen
+      final createdAt = DateTime.tryParse((response['createdAt'] ?? '').toString()) ?? DateTime.now();
       final request = PendingRequest(
-        status: "Pending",
+        id: response['_id']?.toString(),
+        status: (response['status'] ?? "Pending Payment").toString(),
         purpose: finalPurpose,
         docName: finalDocName,
-        dateCreated: DateTime.now(),
+        dateCreated: createdAt,
       );
 
       // Redirect to Pending Screen
@@ -152,6 +203,7 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
   @override
   void dispose() {
     _otherPurposeController.dispose();
+    _otherRequestController.dispose();
     super.dispose();
   }
 
@@ -194,7 +246,15 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
             ),
 
             // 2. Nested Dropdown Logic
-            if (_mainDocType == 'Certifications') ...[
+            if (_mainDocType == 'Original Documents') ...[
+              _buildLabel("Original Documents:"),
+              _buildDropdown(
+                hint: "Choose Document to Request",
+                value: _subDocType,
+                items: originalDocumentList,
+                onChanged: (val) => setState(() => _subDocType = val),
+              ),
+            ] else if (_mainDocType == 'Certifications') ...[
               _buildLabel("Certifications:"),
               _buildDropdown(
                 hint: "Choose Document to Request",
@@ -209,6 +269,14 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                 value: _subDocType,
                 items: trueCopyList,
                 onChanged: (val) => setState(() => _subDocType = val),
+              ),
+            ],
+
+            if (_subDocType == 'Others') ...[
+              SizedBox(height: 10.h),
+              TextFormField(
+                controller: _otherRequestController,
+                decoration: _inputDecoration(hint: "Specify requested document"),
               ),
             ],
 

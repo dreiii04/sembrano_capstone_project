@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import '../constants.dart';
 import '../screens/history_screen.dart';
-import '../widgets/custom_font.dart';
 
 class HistoryDetailScreen extends StatelessWidget {
   final HistoryItem item;
@@ -61,7 +59,7 @@ class HistoryDetailScreen extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(15.r),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10.r), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10.r), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5)]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(title, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
         const Divider(),

@@ -10,13 +10,18 @@ import 'package:flutter/gestures.dart';
 import '../services/api_service.dart';
 
 class LogInScreen extends StatefulWidget {
-  const LogInScreen({super.key});
+  const LogInScreen({super.key, this.role = 'alumni'});
+
+  final String role;
 
   @override
   State<LogInScreen> createState() => _LogInScreenState();
 }
 
 class _LogInScreenState extends State<LogInScreen> {
+  static const String _testStudentEmail = 'student.test@verifitor.test';
+  static const String _testStudentPassword = 'Test@1234';
+
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -24,11 +29,32 @@ class _LogInScreenState extends State<LogInScreen> {
   bool _isPasswordVisible = false;
   bool _isLoading = false;
 
+  bool get _showSignUp => widget.role.toLowerCase() != 'student';
+
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    return emailRegex.hasMatch(email);
+  }
+
+  void _fillTestStudentCredentials() {
+    setState(() {
+      emailController.text = _testStudentEmail;
+      passwordController.text = _testStudentPassword;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     // Initialize API service
     ApiService.init();
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -79,6 +105,21 @@ class _LogInScreenState extends State<LogInScreen> {
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: _fillTestStudentCredentials,
+                            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                            child: Text(
+                              'Use Test Student Login',
+                              style: TextStyle(
+                                color: FB_BACKGROUND_LIGHT,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                         SizedBox(height: 30.h),
 
                         // Email
@@ -92,10 +133,11 @@ class _LogInScreenState extends State<LogInScreen> {
                           hintTextSize: 14.sp,
                           fontColor: FB_DARK_PRIMARY,
                           validator: (value) {
-                            if (value == null || value.isEmpty) {
+                            final email = value?.trim() ?? '';
+                            if (email.isEmpty) {
                               return 'Enter email';
                             }
-                            if (!value.contains('@')) {
+                            if (!_isValidEmail(email)) {
                               return 'Enter valid email';
                             }
                             return null;
@@ -115,9 +157,16 @@ class _LogInScreenState extends State<LogInScreen> {
                           fontSize: 14.sp,
                           hintTextSize: 14.sp,
                           fontColor: FB_DARK_PRIMARY,
-                          validator: (value) => value == null || value.isEmpty
-                              ? 'Enter password'
-                              : null,
+                          validator: (value) {
+                            final password = value?.trim() ?? '';
+                            if (password.isEmpty) {
+                              return 'Enter password';
+                            }
+                            if (password.length < 8) {
+                              return 'Password must be at least 8 characters';
+                            }
+                            return null;
+                          },
                           suffixIcon: IconButton(
                             padding: EdgeInsets.zero,
                             icon: Icon(
@@ -174,14 +223,14 @@ class _LogInScreenState extends State<LogInScreen> {
                             });
 
                             try {
-                              final response = await ApiService.login(
+                              await ApiService.login(
                                 email: email,
                                 password: password,
                               );
 
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
+                                  const SnackBar(
                                     content: Text('Login successful!'),
                                     backgroundColor: Colors.green,
                                   ),
@@ -225,31 +274,33 @@ class _LogInScreenState extends State<LogInScreen> {
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            RichText(
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: "Don't have an account? ",
-                                    style: TextStyle(
-                                      fontSize: 13.sp,
-                                      color: Colors.white70,
+                            if (_showSignUp) ...[
+                              RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: "Don't have an account? ",
+                                      style: TextStyle(
+                                        fontSize: 13.sp,
+                                        color: Colors.white70,
+                                      ),
                                     ),
-                                  ),
-                                  TextSpan(
-                                    text: 'Sign up',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13.sp,
-                                      color: FB_BACKGROUND_LIGHT,
+                                    TextSpan(
+                                      text: 'Sign up',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13.sp,
+                                        color: FB_BACKGROUND_LIGHT,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () => Navigator.pushNamed(
+                                            context, '/register'),
                                     ),
-                                    recognizer: TapGestureRecognizer()
-                                      ..onTap = () => Navigator.pushNamed(
-                                          context, '/register'),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 15.h),
+                              SizedBox(height: 15.h),
+                            ],
                             RichText(
                               text: TextSpan(
                                 children: [

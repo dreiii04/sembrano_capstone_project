@@ -1,12 +1,12 @@
-import 'package:capstone_project/screens/history_screen.dart';
+import 'dart:io';
+
 import 'package:capstone_project/screens/home_screen.dart';
 import 'package:capstone_project/screens/pending_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../constants.dart';
+import 'package:image_picker/image_picker.dart';
 import '../widgets/custom_font.dart';
-import '../screens/request_detail_screen.dart';
-import '../screens/request_form_screen.dart';
+import '../services/api_service.dart';
 
 
 class PaymentMethodScreen extends StatefulWidget {
@@ -19,6 +19,85 @@ class PaymentMethodScreen extends StatefulWidget {
 
 class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
   bool _acknowledged = false;
+  File? _receiptImage;
+  bool _isSubmitting = false;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickReceiptImage() async {
+    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (picked == null) return;
+    setState(() {
+      _receiptImage = File(picked.path);
+    });
+  }
+
+  Future<void> _submitPayment() async {
+    if (!_acknowledged) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please acknowledge before submitting payment.')),
+      );
+      return;
+    }
+
+    if (_receiptImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please upload your payment receipt image.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final requestId = widget.request.id ??
+          'local-${widget.request.dateCreated.microsecondsSinceEpoch}';
+
+      await ApiService.createTransaction(
+        requestId: requestId,
+        amount: '110.00',
+        paymentMethod: 'GCash',
+        paymentProof: _receiptImage!.path,
+      );
+
+      String updatedStatus = 'Pending Approval';
+      if (widget.request.id != null && widget.request.id!.isNotEmpty) {
+        final updated = await ApiService.updateRequestStatus(
+          id: widget.request.id!,
+          status: updatedStatus,
+        );
+        updatedStatus = (updated['status'] ?? updatedStatus).toString();
+      }
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SuccessfulScreen(
+            request: PendingRequest(
+              id: widget.request.id,
+              docName: widget.request.docName,
+              purpose: widget.request.purpose,
+              dateCreated: widget.request.dateCreated,
+              status: updatedStatus,
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +155,45 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 ],
               ),
             ),
+            SizedBox(height: 16.h),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(14.r),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(color: Colors.grey.shade300),
+                color: Colors.white,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomFont(
+                    text: 'Receipt Upload',
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF233446),
+                  ),
+                  SizedBox(height: 8.h),
+                  CustomFont(
+                    text: 'Upload your payment receipt image for verification.',
+                    fontSize: 11.sp,
+                    color: Colors.black54,
+                  ),
+                  SizedBox(height: 10.h),
+                  if (_receiptImage != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8.r),
+                      child: Image.file(_receiptImage!, height: 130.h, width: double.infinity, fit: BoxFit.cover),
+                    ),
+                  SizedBox(height: 8.h),
+                  OutlinedButton.icon(
+                    onPressed: _pickReceiptImage,
+                    icon: const Icon(Icons.upload_file),
+                    label: Text(_receiptImage == null ? 'Upload Receipt' : 'Change Receipt'),
+                  ),
+                ],
+              ),
+            ),
             const Spacer(),
             Row(
               children: [
@@ -85,15 +203,18 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
             ),
             SizedBox(height: 10.h),
             ElevatedButton(
-              onPressed: _acknowledged 
-                ? () => Navigator.push(context, MaterialPageRoute(builder: (context) => SuccessfulScreen(request: widget.request)))
-                : null,
+              onPressed: _isSubmitting ? null : _submitPayment,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF233446),
                 fixedSize: Size(double.infinity, 50.h),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
               ),
-              child: CustomFont(text: "Confirm Payment", color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16.sp),
+              child: CustomFont(
+                text: _isSubmitting ? "Submitting..." : "Submit Receipt",
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16.sp,
+              ),
             ),
           ],
         ),
@@ -134,20 +255,6 @@ class _PaymentMethodScreenState extends State<PaymentMethodScreen> {
       ),
     );
   }
-
-
-  Widget _miniRow(String label, String value, {bool isBold = false}) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 2.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          CustomFont(text: label, fontSize: 12.sp, color: Colors.black54),
-          CustomFont(text: value, fontSize: 12.sp, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: isBold ? const Color(0xFF233446) : Colors.black87),
-        ],
-      ),
-    );
-  }
 }
 
 
@@ -175,23 +282,23 @@ class SuccessfulScreen extends StatelessWidget {
               CustomFont(text: "Payment Successful", fontSize: 24.sp, fontWeight: FontWeight.bold, color: const Color(0xFF233446)),
               SizedBox(height: 10.h),
               CustomFont(
-                text: "Your payment has been successfully submitted. Please wait while the registrar verifies your payment.",
+                text: "Your receipt has been submitted. Please wait while the registrar verifies your payment.",
                 textAlign: TextAlign.center, fontSize: 13.sp, color: Colors.black54,
               ),
               SizedBox(height: 50.h),
               ElevatedButton(
                 onPressed: () {
-                  // Need to improve logic for updating the request status in the actual app, but for now we will just navigate back to home with the new request added to pending list
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(
                       builder: (context) => HomeScreen(
                         initialIndex: 1, // Go to Pending/Requests Tab
                         newRequest: PendingRequest(
+                          id: request.id,
                           docName: request.docName,
                           purpose: request.purpose,
                           dateCreated: request.dateCreated,
-                          status: "Processing", // Updated status
+                          status: request.status,
                         ),
                       ),
                     ),

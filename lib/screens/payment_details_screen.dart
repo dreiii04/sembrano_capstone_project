@@ -1,12 +1,7 @@
-import 'package:capstone_project/screens/history_screen.dart';
-import 'package:capstone_project/screens/home_screen.dart';
 import 'package:capstone_project/screens/pending_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../constants.dart';
 import '../widgets/custom_font.dart';
-import '../screens/request_detail_screen.dart';
-import '../screens/request_form_screen.dart';
 import '../screens/payment_method_screen.dart';
 
 class PaymentDetailsScreen extends StatefulWidget {

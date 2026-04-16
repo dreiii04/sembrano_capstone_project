@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import '../constants.dart';
 import '../widgets/custom_font.dart';
 import '../screens/history_detail_screen.dart';
 import '../services/api_service.dart';
@@ -43,12 +42,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
     _fetchHistory();
   }
 
+  List<HistoryItem> _dedupeHistory(List<HistoryItem> items) {
+    final unique = <String, HistoryItem>{};
+    for (final item in items) {
+      final key = (item.id != null && item.id!.isNotEmpty)
+          ? 'id:${item.id}'
+          : 'fallback:${item.title}|${item.purpose}|${item.status}|${item.date.toIso8601String()}';
+      unique[key] = item;
+    }
+    return unique.values.toList();
+  }
+
   Future<void> _fetchHistory() async {
     try {
       final requests = await ApiService.getRequests();
       setState(() {
         _apiHistory = requests
-            .where((req) => req['status'] != 'Pending')
+            .where((req) {
+              final status = (req['status'] ?? '').toString().toLowerCase();
+              const nonHistoryStatuses = {
+                'pending',
+                'pending payment',
+                'pending approval',
+                'processing',
+              };
+              return !nonHistoryStatuses.contains(status);
+            })
             .map((req) {
           return HistoryItem(
             title: req['documentType'] ?? req['subDocumentType'] ?? 'Unknown',
@@ -73,7 +92,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     // Combine API history with local history
-    List<HistoryItem> allHistory = [..._apiHistory, ...widget.historyList];
+    final localNonPending = widget.historyList
+        .where((item) => item.status.toLowerCase() != 'pending')
+        .toList();
+    List<HistoryItem> allHistory = _dedupeHistory([..._apiHistory, ...localNonPending]);
 
     // Filter Logic
     List<String> filters = ["All"];

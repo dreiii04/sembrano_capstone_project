@@ -1,16 +1,123 @@
 import 'package:capstone_project/constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../widgets/custom_font.dart';
-import '../screens/request_detail_screen.dart';
 import '../screens/payment_details_screen.dart';
 import '../screens/pending_screen.dart';
+import '../services/api_service.dart';
 
 
-class RequestDetailsScreen extends StatelessWidget {
+class RequestDetailsScreen extends StatefulWidget {
   final PendingRequest request;
   const RequestDetailsScreen({super.key, required this.request});
+
+  @override
+  State<RequestDetailsScreen> createState() => _RequestDetailsScreenState();
+}
+
+class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
+  String? _receiptProof;
+  bool _loadingReceipt = false;
+
+  PendingRequest get request => widget.request;
+
+  bool get _canPay => request.status.toLowerCase() == 'pending payment';
+  bool get _isPendingApproval => request.status.toLowerCase() == 'pending approval';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReceiptIfAvailable();
+  }
+
+  Future<void> _loadReceiptIfAvailable() async {
+    if (!_isPendingApproval || request.id == null || request.id!.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _loadingReceipt = true;
+    });
+
+    try {
+      final txn = await ApiService.getLatestTransactionForRequest(
+        requestId: request.id!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _receiptProof = txn?['paymentProof']?.toString();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _receiptProof = null;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingReceipt = false;
+        });
+      }
+    }
+  }
+
+  void _showReceiptDialog() {
+    if (_receiptProof == null || _receiptProof!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No receipt image found for this request yet.')),
+      );
+      return;
+    }
+
+    final proof = _receiptProof!;
+    final proofUri = Uri.tryParse(proof);
+    final canPreviewNetwork = proofUri != null &&
+        (proofUri.scheme == 'http' || proofUri.scheme == 'https');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Uploaded Receipt'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (canPreviewNetwork)
+              Image.network(
+                proof,
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Text('Unable to preview receipt image.'),
+              )
+            else
+              const Text('Receipt image is stored locally on device. Preview not available in this view.'),
+            const SizedBox(height: 12),
+            SelectableText(
+              kIsWeb ? proof : 'Receipt reference: $proof',
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  String get _statusMessage {
+    final normalized = request.status.toLowerCase();
+    if (normalized == 'pending payment') {
+      return 'Payment is required to continue processing your request. Please complete your payment to proceed.';
+    }
+    if (normalized == 'pending approval') {
+      return 'Your receipt was submitted. Please wait for registrar approval.';
+    }
+    return 'Your request is currently under processing. Please check back for updates.';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +155,11 @@ class RequestDetailsScreen extends StatelessWidget {
                 child: Text(request.status, style: TextStyle(color: Colors.yellow.shade800, fontWeight: FontWeight.bold)),
               ),
               SizedBox(height: 10.h),
-              const Text("Payment is required to continue processing your request. Please complete your payment to proceed.",
-                style: TextStyle(color: Colors.red, fontSize: 11),
+              Text(_statusMessage,
+                style: TextStyle(
+                  color: _canPay ? Colors.red : Colors.orange.shade800,
+                  fontSize: 11,
+                ),
               ),
             ]),
             SizedBox(height: 15.h),
@@ -59,15 +169,30 @@ class RequestDetailsScreen extends StatelessWidget {
               const Divider(),
               _buildInfoRow("Total Amount Due:", "PHP 110", isBold: true),
               SizedBox(height: 15.h),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: () {
-                     Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentDetailsScreen(request: request)));
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF233446)),
-                  child: CustomFont(text: "Pay now", color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14.sp),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (_isPendingApproval)
+                    OutlinedButton(
+                      onPressed: _loadingReceipt ? null : _showReceiptDialog,
+                      child: Text(_loadingReceipt ? 'Loading...' : 'View Receipt'),
+                    ),
+                  if (_isPendingApproval) SizedBox(width: 10.w),
+                  ElevatedButton(
+                    onPressed: _canPay
+                        ? () {
+                            Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentDetailsScreen(request: request)));
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF233446)),
+                    child: CustomFont(
+                      text: _canPay ? "Pay now" : "Awaiting Approval",
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.sp,
+                    ),
+                  ),
+                ],
               ),
             ]),
           ],
@@ -83,7 +208,7 @@ class RequestDetailsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10.r),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)],
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

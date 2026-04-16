@@ -2,11 +2,10 @@ import 'package:capstone_project/screens/data_consent_screen.dart';
 import 'package:capstone_project/screens/pending_screen.dart';
 import 'package:capstone_project/screens/profile_screen.dart';
 import 'package:capstone_project/screens/history_screen.dart';
+import 'package:capstone_project/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants.dart';
-import 'request_form_screen.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import '../services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -41,23 +40,20 @@ class _HomeScreenState extends State<HomeScreen> {
     ApiService.init();
 
     if (widget.newRequest != null) {
+      final incoming = widget.newRequest!;
+      final hasIncomingId = incoming.id != null && incoming.id!.isNotEmpty;
 
-      bool exists = HomeScreen.globalRequests.any((req) =>
-        req.dateCreated == widget.newRequest!.dateCreated);
+      bool exists = HomeScreen.globalRequests.any((req) {
+        if (hasIncomingId && req.id != null && req.id!.isNotEmpty) {
+          return req.id == incoming.id;
+        }
+        return req.dateCreated == incoming.dateCreated &&
+            req.docName == incoming.docName &&
+            req.purpose == incoming.purpose;
+      });
 
       if (!exists) {
-        HomeScreen.globalRequests.add(widget.newRequest!);
-
-        //Adds also the current request
-        HomeScreen.globalHistory.add(HistoryItem(
-          title: widget.newRequest!.docName,
-          date: widget.newRequest!.dateCreated,
-          purpose: "Document Request",
-          status: "Pending",
-          isApproved: false,
-        ));
-
-
+        HomeScreen.globalRequests.add(incoming);
       }
     }
   }
@@ -162,13 +158,53 @@ Widget _buildHomeContent(BuildContext context) {
                       alignment: Alignment.topRight,
                       child: Padding(
                         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                        child: GestureDetector(
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())),
-                          child: CircleAvatar(
-                            backgroundColor: Colors.white,
-                            radius: 20.r,
-                            child: Icon(Icons.person, size: 22.sp, color: FB_PRIMARY),
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ValueListenableBuilder<int>(
+                              valueListenable: NotificationService.unreadCount,
+                              builder: (context, unread, _) {
+                                return Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () => Navigator.pushNamed(context, '/notifications'),
+                                      child: CircleAvatar(
+                                        backgroundColor: Colors.white,
+                                        radius: 20.r,
+                                        child: Icon(Icons.notifications_none, size: 22.sp, color: FB_PRIMARY),
+                                      ),
+                                    ),
+                                    if (unread > 0)
+                                      Positioned(
+                                        right: -2.w,
+                                        top: -2.h,
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 2.h),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            borderRadius: BorderRadius.circular(10.r),
+                                          ),
+                                          child: Text(
+                                            unread > 99 ? '99+' : unread.toString(),
+                                            style: TextStyle(color: Colors.white, fontSize: 9.sp, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                            SizedBox(width: 10.w),
+                            GestureDetector(
+                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen())),
+                              child: CircleAvatar(
+                                backgroundColor: Colors.white,
+                                radius: 20.r,
+                                child: Icon(Icons.person, size: 22.sp, color: FB_PRIMARY),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

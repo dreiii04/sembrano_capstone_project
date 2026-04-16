@@ -1,8 +1,6 @@
-import 'package:capstone_project/screens/payment_details_screen.dart';
 import 'package:capstone_project/screens/request_form_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../constants.dart';
 
 
 class DataConsentScreen extends StatefulWidget {
@@ -114,7 +112,7 @@ class _DataConsentScreenState extends State<DataConsentScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15.r),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, 5))],
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 5))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

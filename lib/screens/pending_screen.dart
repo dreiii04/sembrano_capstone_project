@@ -41,6 +41,17 @@ class _PendingScreenState extends State<PendingScreen> {
     _fetchRequests();
   }
 
+  List<PendingRequest> _dedupeRequests(List<PendingRequest> items) {
+    final unique = <String, PendingRequest>{};
+    for (final item in items) {
+      final key = (item.id != null && item.id!.isNotEmpty)
+          ? 'id:${item.id}'
+          : 'fallback:${item.docName}|${item.purpose}|${item.status}|${item.dateCreated.toIso8601String()}';
+      unique[key] = item;
+    }
+    return unique.values.toList();
+  }
+
   Future<void> _fetchRequests() async {
     try {
       final requests = await ApiService.getRequests();
@@ -68,7 +79,7 @@ class _PendingScreenState extends State<PendingScreen> {
   @override
   Widget build(BuildContext context) {
     // Combine API requests with local requests
-    List<PendingRequest> allRequests = [..._apiRequests, ...widget.requestList];
+    List<PendingRequest> allRequests = _dedupeRequests([..._apiRequests, ...widget.requestList]);
 
     // 1. Logic to get unique doc names from the list for the filter
     List<String> filters = ["All"];
@@ -200,6 +211,8 @@ class _PendingScreenState extends State<PendingScreen> {
       case "RELEASED": return Colors.orange;
       case "PROCESSING": return Colors.green;
       case "APPROVED": return Colors.blue;
+      case "PENDING PAYMENT": return Colors.red.shade700;
+      case "PENDING APPROVAL": return Colors.deepOrange;
       default: return Colors.yellow.shade700;
     }
   }

@@ -1,4 +1,3 @@
-import 'package:capstone_project/constants.dart';
 import 'package:flutter/material.dart';
 
 class CustomFont extends StatelessWidget {

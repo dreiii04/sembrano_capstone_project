@@ -16,6 +16,8 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  static const String _testStudentEmail = 'student.test@verifitor.test';
+  static const String _testStudentPassword = 'Test@1234';
 
   TextEditingController firstNameController = TextEditingController();
   TextEditingController lastNameController = TextEditingController();
@@ -27,10 +29,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
   TextEditingController programController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController confirmPasswordController = TextEditingController();
+  TextEditingController otpController = TextEditingController();
 
   bool _isPasswordObscure = true;
   bool _isConfirmPasswordObscure = true;
   bool _isLoading = false;
+  bool _isSendingOtp = false;
+  bool _isVerifyingOtp = false;
+  bool _hasAcceptedTerms = false;
+  String _selectedRole = 'student';
+  String? _verifiedEmail;
+
+  bool get _isEmailVerified {
+    final currentEmail = emailController.text.trim().toLowerCase();
+    return _verifiedEmail != null && _verifiedEmail == currentEmail;
+  }
+
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    return emailRegex.hasMatch(email);
+  }
+
+  int _passwordStrengthScore(String password) {
+    int score = 0;
+    if (password.length >= 8) score++;
+    if (RegExp(r'[A-Z]').hasMatch(password)) score++;
+    if (RegExp(r'[a-z]').hasMatch(password)) score++;
+    if (RegExp(r'[0-9]').hasMatch(password)) score++;
+    if (RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(password)) score++;
+    return score;
+  }
+
+  String _passwordStrengthText(String password) {
+    final score = _passwordStrengthScore(password);
+    if (password.isEmpty) return 'Password strength: -';
+    if (score <= 2) return 'Password strength: Weak';
+    if (score == 3 || score == 4) return 'Password strength: Medium';
+    return 'Password strength: Strong';
+  }
+
+  Color _passwordStrengthColor(String password) {
+    final score = _passwordStrengthScore(password);
+    if (password.isEmpty) return Colors.white70;
+    if (score <= 2) return Colors.red.shade300;
+    if (score == 3 || score == 4) return Colors.orange.shade300;
+    return Colors.green.shade300;
+  }
 
   void _showValidationAlert(String message) {
     showDialog(
@@ -55,13 +99,133 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  Future<void> _sendSignupOtp() async {
+    final email = emailController.text.trim().toLowerCase();
+
+    if (email.isEmpty) {
+      _showValidationAlert('Email is required before OTP can be sent.');
+      return;
+    }
+
+    if (!_isValidEmail(email)) {
+      _showValidationAlert('Enter a valid email address.');
+      return;
+    }
+
+    setState(() {
+      _isSendingOtp = true;
+    });
+
+    try {
+      bool isDeliverable = true;
+
+      // Optional check; if backend validation endpoint is unavailable, continue with OTP flow.
+      try {
+        isDeliverable = await ApiService.validateEmailWithMailboxLayer(email: email);
+      } catch (_) {
+        isDeliverable = true;
+      }
+
+      if (!isDeliverable) {
+        if (mounted) {
+          _showValidationAlert('This email appears invalid or undeliverable.');
+        }
+        return;
+      }
+
+      await ApiService.requestSignupOtp(email: email);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('OTP sent to your email.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showValidationAlert(
+        'Unable to send OTP: ${e.toString().replaceAll('Exception: ', '')}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingOtp = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _verifySignupOtp() async {
+    final email = emailController.text.trim().toLowerCase();
+    final otp = otpController.text.trim();
+
+    if (email.isEmpty || !_isValidEmail(email)) {
+      _showValidationAlert('Enter a valid email first.');
+      return;
+    }
+
+    if (!RegExp(r'^\d{6}$').hasMatch(otp)) {
+      _showValidationAlert('Enter the 6-digit OTP sent to your email.');
+      return;
+    }
+
+    setState(() {
+      _isVerifyingOtp = true;
+    });
+
+    try {
+      await ApiService.verifySignupOtp(email: email, otp: otp);
+      if (!mounted) return;
+
+      setState(() {
+        _verifiedEmail = email;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email verified successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showValidationAlert(
+        'OTP verification failed: ${e.toString().replaceAll('Exception: ', '')}',
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isVerifyingOtp = false;
+        });
+      }
+    }
+  }
+
+  void _fillTestStudentData() {
+    firstNameController.text = 'Test';
+    lastNameController.text = 'Student';
+    dateOfBirthController.text = '2001-01-01';
+    emailController.text = _testStudentEmail;
+    schoolEmailController.text = _testStudentEmail;
+    studentIdController.text = 'TEST-2026-001';
+    yearLevelController.text = '4';
+    programController.text = 'BS Information Technology';
+    passwordController.text = _testStudentPassword;
+    confirmPasswordController.text = _testStudentPassword;
+    otpController.text = '123456';
+
+    setState(() {
+      _selectedRole = 'student';
+      _hasAcceptedTerms = true;
+      _verifiedEmail = _testStudentEmail;
+    });
+  }
+
   void _handleRegister() async {
     final firstName = firstNameController.text.trim();
     final lastName = lastNameController.text.trim();
     final email = emailController.text.trim();
-    final studentId = studentIdController.text.trim();
-    final yearLevel = yearLevelController.text.trim();
-    final program = programController.text.trim();
     final pass = passwordController.text.trim();
     final confirm = confirmPasswordController.text.trim();
 
@@ -89,6 +253,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    if (!_isEmailVerified) {
+      _showValidationAlert('Please verify your email OTP before creating an account.');
+      return;
+    }
+
+    if (!_hasAcceptedTerms) {
+      _showValidationAlert('You must accept the Terms and Conditions.');
+      return;
+    }
+
     // Show loading
     setState(() {
       _isLoading = true;
@@ -96,12 +270,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       // Call API to register
-      final response = await ApiService.register(
+      await ApiService.register(
         email: email,
         password: pass,
         firstName: firstName,
         lastName: lastName,
-        role: 'student',
+        role: _selectedRole,
       );
 
       if (mounted) {
@@ -124,6 +298,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     }
+  }
+
+  @override
+  void dispose() {
+    firstNameController.dispose();
+    lastNameController.dispose();
+    dateOfBirthController.dispose();
+    emailController.dispose();
+    schoolEmailController.dispose();
+    studentIdController.dispose();
+    yearLevelController.dispose();
+    programController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    otpController.dispose();
+    super.dispose();
   }
 
   @override
@@ -176,7 +366,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: _fillTestStudentData,
+                            child: Text(
+                              'Use Test Student Account',
+                              style: TextStyle(
+                                color: FB_BACKGROUND_LIGHT,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                         SizedBox(height: 25.h),
+
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedRole,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                            ),
+                            dropdownColor: Colors.white,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: FB_DARK_PRIMARY,
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'student',
+                                child: Text('Student'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'alumni',
+                                child: Text('Alumni'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() {
+                                _selectedRole = value;
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(height: 15.h),
 
                         // First Name
                         CustomTextFormField(
@@ -231,11 +471,64 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             if (value == null || value.isEmpty) {
                               return 'Enter email';
                             }
-                            if (!value.contains('@')) {
+                            if (!_isValidEmail(value.trim())) {
                               return 'Enter valid email';
                             }
                             return null;
                           },
+                        ),
+                        SizedBox(height: 10.h),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CustomTextFormField(
+                                height: ScreenUtil().setHeight(10),
+                                width: ScreenUtil().setWidth(10),
+                                controller: otpController,
+                                hintText: 'Email OTP (6 digits)',
+                                fontSize: 14.sp,
+                                hintTextSize: 14.sp,
+                                fontColor: FB_DARK_PRIMARY,
+                                bgColor: Colors.white,
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            TextButton(
+                              onPressed: _isSendingOtp ? null : _sendSignupOtp,
+                              child: Text(
+                                _isSendingOtp ? 'Sending...' : 'Send OTP',
+                                style: TextStyle(
+                                  color: FB_BACKGROUND_LIGHT,
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed:
+                                _isVerifyingOtp ? null : _verifySignupOtp,
+                            child: Text(
+                              _isVerifyingOtp
+                                  ? 'Verifying...'
+                                  : _isEmailVerified
+                                      ? 'Verified'
+                                      : 'Verify OTP',
+                              style: TextStyle(
+                                color: _isEmailVerified
+                                    ? Colors.green.shade200
+                                    : FB_BACKGROUND_LIGHT,
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ),
                         SizedBox(height: 15.h),
 
@@ -354,7 +647,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ? 'Enter password'
                               : null,
                         ),
+                        SizedBox(height: 6.h),
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: passwordController,
+                          builder: (context, value, _) {
+                            final password = value.text;
+                            return Text(
+                              _passwordStrengthText(password),
+                              style: TextStyle(
+                                color: _passwordStrengthColor(password),
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          },
+                        ),
                         SizedBox(height: 25.h),
+
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: _hasAcceptedTerms,
+                              activeColor: FB_DARK_PRIMARY,
+                              onChanged: (value) {
+                                setState(() {
+                                  _hasAcceptedTerms = value ?? false;
+                                });
+                              },
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _hasAcceptedTerms = !_hasAcceptedTerms;
+                                  });
+                                },
+                                child: Text(
+                                  'I accept the Terms and Conditions.',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: Colors.white70,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12.h),
 
                         // Register Button
                         CustomInkwellButton(
